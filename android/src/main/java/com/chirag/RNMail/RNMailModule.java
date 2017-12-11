@@ -6,17 +6,15 @@ import android.content.pm.ResolveInfo;
 import android.net.Uri;
 import android.text.Html;
 
-import com.facebook.react.bridge.Callback;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
-import com.facebook.react.bridge.ReadableArray;
 import com.facebook.react.bridge.ReadableMap;
+import com.facebook.react.bridge.ReadableArray;
+import com.facebook.react.bridge.Callback;
 
-import java.io.File;
-import java.util.ArrayList;
 import java.util.List;
-
+import java.io.File;
 
 /**
  * NativeModule that allows JS to open emails sending apps chooser.
@@ -36,11 +34,12 @@ public class RNMailModule extends ReactContextBaseJavaModule {
   }
 
   /**
-   * Converts a ReadableArray to a String array
-   *
-   * @param r the ReadableArray instance to convert
-   * @return array of strings
-   */
+    * Converts a ReadableArray to a String array
+    *
+    * @param r the ReadableArray instance to convert
+    *
+    * @return array of strings
+  */
   private String[] readableArrayToStringArray(ReadableArray r) {
     int length = r.size();
     String[] strArray = new String[length];
@@ -54,9 +53,8 @@ public class RNMailModule extends ReactContextBaseJavaModule {
 
   @ReactMethod
   public void mail(ReadableMap options, Callback callback) {
-    Intent i = new Intent(Intent.ACTION_SEND_MULTIPLE);
-    i.setType("message/rfc822");
-
+    Intent i = new Intent(Intent.ACTION_SENDTO);
+    i.setData(Uri.parse("mailto:"));
 
     if (options.hasKey("subject") && !options.isNull("subject")) {
       i.putExtra(Intent.EXTRA_SUBJECT, options.getString("subject"));
@@ -68,46 +66,38 @@ public class RNMailModule extends ReactContextBaseJavaModule {
         i.putExtra(Intent.EXTRA_TEXT, Html.fromHtml(body));
       } else {
         i.putExtra(Intent.EXTRA_TEXT, body);
-      }
+    }
     }
 
     if (options.hasKey("recipients") && !options.isNull("recipients")) {
       ReadableArray recipients = options.getArray("recipients");
       i.putExtra(Intent.EXTRA_EMAIL, readableArrayToStringArray(recipients));
-    }
+      }
 
     if (options.hasKey("ccRecipients") && !options.isNull("ccRecipients")) {
       ReadableArray ccRecipients = options.getArray("ccRecipients");
       i.putExtra(Intent.EXTRA_CC, readableArrayToStringArray(ccRecipients));
     }
-
-    if (options.hasKey("bccRecipients") && !options.isNull("bccRecipients")) {
-      ReadableArray bccRecipients = options.getArray("bccRecipients");
-      i.putExtra(Intent.EXTRA_BCC, readableArrayToStringArray(bccRecipients));
-    }
-
     if (options.hasKey("attachments") && !options.isNull("attachments")) {
       ReadableArray r = options.getArray("attachments");
       int length = r.size();
       ArrayList<Uri> uris = new ArrayList<Uri>();
       for (int keyIndex = 0; keyIndex < length; keyIndex++) {
         ReadableMap clip = r.getMap(keyIndex);
-        if (clip.hasKey("path") && !clip.isNull("path")) {
+        if (clip.hasKey("path") && !clip.isNull("path")){
           String path = clip.getString("path");
           File file = new File(path);
-          if (file.exists()) {
-            uris.add(Uri.fromFile(file));
-          }
+          Uri u = Uri.fromFile(file);
+          uris.add(u);
         }
       }
       i.putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris);
     }
 
-    i.setType(null); // If we're using a selector, then clear the type to null. I don't know why this is needed, but it doesn't work without it.
-    final Intent restrictIntent = new Intent(Intent.ACTION_SENDTO);
-    Uri data = Uri.parse("mailto:?to=some@email.com");
-    restrictIntent.setData(data);
-    i.setSelector(restrictIntent);
+    if (options.hasKey("bccRecipients") && !options.isNull("bccRecipients")) {
+      ReadableArray bccRecipients = options.getArray("bccRecipients");
+      i.putExtra(Intent.EXTRA_BCC, readableArrayToStringArray(bccRecipients));
+    }
 
     PackageManager manager = reactContext.getPackageManager();
     List<ResolveInfo> list = manager.queryIntentActivities(i, 0);
@@ -125,12 +115,14 @@ public class RNMailModule extends ReactContextBaseJavaModule {
         callback.invoke("error");
       }
     } else {
-      Intent chooser = Intent.createChooser(i, "Send Mail");
-      chooser.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-      try {
-        reactContext.startActivity(chooser);
-      } catch (Exception ex) {
-      }
+    Intent chooser = Intent.createChooser(i, "Send Mail");
+    chooser.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+
+    try {
+      reactContext.startActivity(chooser);
+    } catch (Exception ex) {
+      callback.invoke("error");
     }
   }
+}
 }
