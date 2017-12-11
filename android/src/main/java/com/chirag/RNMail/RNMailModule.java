@@ -68,17 +68,32 @@ public class RNMailModule extends ReactContextBaseJavaModule {
         i.putExtra(Intent.EXTRA_TEXT, Html.fromHtml(body));
       } else {
         i.putExtra(Intent.EXTRA_TEXT, body);
-      }
+    }
     }
 
     if (options.hasKey("recipients") && !options.isNull("recipients")) {
       ReadableArray recipients = options.getArray("recipients");
       i.putExtra(Intent.EXTRA_EMAIL, readableArrayToStringArray(recipients));
-    }
+      }
 
     if (options.hasKey("ccRecipients") && !options.isNull("ccRecipients")) {
       ReadableArray ccRecipients = options.getArray("ccRecipients");
       i.putExtra(Intent.EXTRA_CC, readableArrayToStringArray(ccRecipients));
+    }
+    if (options.hasKey("attachments") && !options.isNull("attachments")) {
+      ReadableArray r = options.getArray("attachments");
+      int length = r.size();
+      ArrayList<Uri> uris = new ArrayList<Uri>();
+      for (int keyIndex = 0; keyIndex < length; keyIndex++) {
+        ReadableMap clip = r.getMap(keyIndex);
+        if (clip.hasKey("path") && !clip.isNull("path")){
+          String path = clip.getString("path");
+          File file = new File(path);
+          Uri u = Uri.fromFile(file);
+          uris.add(u);
+        }
+      }
+      i.putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris);
     }
 
     if (options.hasKey("bccRecipients") && !options.isNull("bccRecipients")) {
@@ -131,6 +146,8 @@ public class RNMailModule extends ReactContextBaseJavaModule {
         reactContext.startActivity(chooser);
       } catch (Exception ex) {
       }
+
     }
   }
+}
 }
