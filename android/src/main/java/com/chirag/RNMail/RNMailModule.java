@@ -80,21 +80,6 @@ public class RNMailModule extends ReactContextBaseJavaModule {
       ReadableArray ccRecipients = options.getArray("ccRecipients");
       i.putExtra(Intent.EXTRA_CC, readableArrayToStringArray(ccRecipients));
     }
-    if (options.hasKey("attachments") && !options.isNull("attachments")) {
-      ReadableArray r = options.getArray("attachments");
-      int length = r.size();
-      ArrayList<Uri> uris = new ArrayList<Uri>();
-      for (int keyIndex = 0; keyIndex < length; keyIndex++) {
-        ReadableMap clip = r.getMap(keyIndex);
-        if (clip.hasKey("path") && !clip.isNull("path")){
-          String path = clip.getString("path");
-          File file = new File(path);
-          Uri u = Uri.fromFile(file);
-          uris.add(u);
-        }
-      }
-      i.putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris);
-    }
 
     if (options.hasKey("bccRecipients") && !options.isNull("bccRecipients")) {
       ReadableArray bccRecipients = options.getArray("bccRecipients");
@@ -110,6 +95,7 @@ public class RNMailModule extends ReactContextBaseJavaModule {
         if (clip.hasKey("path") && !clip.isNull("path")) {
           String path = clip.getString("path");
           File file = new File(path);
+          file.setReadable(true, false);
           if (file.exists()) {
             uris.add(Uri.fromFile(file));
           }
@@ -117,12 +103,6 @@ public class RNMailModule extends ReactContextBaseJavaModule {
       }
       i.putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris);
     }
-
-    i.setType(null); // If we're using a selector, then clear the type to null. I don't know why this is needed, but it doesn't work without it.
-    final Intent restrictIntent = new Intent(Intent.ACTION_SENDTO);
-    Uri data = Uri.parse("mailto:?to=some@email.com");
-    restrictIntent.setData(data);
-    i.setSelector(restrictIntent);
 
     PackageManager manager = reactContext.getPackageManager();
     List<ResolveInfo> list = manager.queryIntentActivities(i, 0);
@@ -145,6 +125,7 @@ public class RNMailModule extends ReactContextBaseJavaModule {
       try {
         reactContext.startActivity(chooser);
       } catch (Exception ex) {
+        callback.invoke("error");
       }
 
     }
