@@ -150,4 +150,3 @@ public class RNMailModule extends ReactContextBaseJavaModule {
     }
   }
 }
-}
